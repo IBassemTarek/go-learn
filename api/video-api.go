@@ -8,49 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AppAPI interface {
-	Authenticate(ctx *gin.Context)
+type VideoAPI interface {
 	GetVideos(ctx *gin.Context)
 	CreateVideos(ctx *gin.Context)
 	UpdateVideos(ctx *gin.Context)
 	DeleteVideos(ctx *gin.Context)
 }
 
-type appAPI struct {
-	loginController controller.LoginController
+type videoAPI struct {
 	videoController controller.VideoController
 }
 
-func NewAppAPI(loginController controller.LoginController, videoController controller.VideoController) AppAPI {
-	return &appAPI{
-		loginController: loginController,
+func NewVideoAPI(videoController controller.VideoController) VideoAPI {
+	return &videoAPI{
 		videoController: videoController,
 	}
 }
 
 // paths information
-
-// Authenticate godoc
-// @Summary Provides a JWT token
-// @Description authenticate with username and password to get the JWT token
-// @ID authentication
-// @Consume application/json
-// @Param credentials body dto.Credentials true "Credentials"
-// @Produce json
-// @Tags Auth
-// @Success 200 {object} dto.Token
-// @Failure 401 {object} dto.Response
-// @Router /auth/login [post]
-func (api *appAPI) Authenticate(ctx *gin.Context) {
-	token, err := api.loginController.Login(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, &dto.Response{Message: err.Error()})
-	} else if token == "" {
-		ctx.JSON(http.StatusUnauthorized, &dto.Response{Message: "Invalid credentials"})
-	} else {
-		ctx.JSON(http.StatusOK, &dto.Token{Token: token})
-	}
-}
 
 // GetVideos godoc
 // @Security Bearer
@@ -63,7 +38,7 @@ func (api *appAPI) Authenticate(ctx *gin.Context) {
 // @Success 200 {array} entity.Video
 // @Failure 401 {object} dto.Response
 // @Router /video [get]
-func (api *appAPI) GetVideos(ctx *gin.Context) {
+func (api *videoAPI) GetVideos(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, api.videoController.FindAll())
 }
 
@@ -79,7 +54,7 @@ func (api *appAPI) GetVideos(ctx *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Router /video [post]
-func (api *appAPI) CreateVideos(ctx *gin.Context) {
+func (api *videoAPI) CreateVideos(ctx *gin.Context) {
 	err := api.videoController.Save(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &dto.Response{Message: err.Error()})
@@ -103,7 +78,7 @@ func (api *appAPI) CreateVideos(ctx *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Failure 404 {object} dto.Response
 // @Router /video/{id} [put]
-func (api *appAPI) UpdateVideos(ctx *gin.Context) {
+func (api *videoAPI) UpdateVideos(ctx *gin.Context) {
 	err := api.videoController.Update(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &dto.Response{Message: err.Error()})
@@ -126,7 +101,7 @@ func (api *appAPI) UpdateVideos(ctx *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Failure 404 {object} dto.Response
 // @Router /video/{id} [delete]
-func (api *appAPI) DeleteVideos(ctx *gin.Context) {
+func (api *videoAPI) DeleteVideos(ctx *gin.Context) {
 	err := api.videoController.Delete(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &dto.Response{Message: err.Error()})

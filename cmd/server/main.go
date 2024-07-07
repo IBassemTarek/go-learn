@@ -19,6 +19,7 @@ var (
 	videoRepository repository.VideoRepository = repository.NewVideoRepository()
 	videoService    service.VideoService       = service.NewVideoService(videoRepository)
 	videoController controller.VideoController = controller.NewVideoController(videoService)
+
 	loginService    service.LoginService       = service.NewLoginService()
 	jwtService      service.JWTService         = service.NewJWTService()
 	loginController controller.LoginController = controller.NewLoginController(loginService, jwtService)
@@ -31,16 +32,16 @@ var (
 // @SecurityRequirement Bearer
 func main() {
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "localhost:8082"
+	host := os.Getenv("PORT")
+	if host == "" {
+		host = "localhost:8082"
 	}
 
 	// swagger 2.0 meta information
 	docs.SwaggerInfo.Title = "Demo Video API"
 	docs.SwaggerInfo.Description = "This is a simple video API"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = port
+	docs.SwaggerInfo.Host = host
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}
 
@@ -61,21 +62,23 @@ func main() {
 		// gindump.Dump(),
 	)
 
-	appAPI := api.NewAppAPI(loginController, videoController)
+	videoAPI := api.NewVideoAPI(videoController)
+	authAPI := api.NewAuthAPI(loginController)
+
 	apiRoutes := server.Group(docs.SwaggerInfo.BasePath)
 	{
 		authRoutes := apiRoutes.Group("/auth")
 		{
-			authRoutes.POST("/login", appAPI.Authenticate)
+			authRoutes.POST("/login", authAPI.Authenticate)
 		}
 		videoRoutes := apiRoutes.Group("/video", middleware.AuthorizeJWT())
 		{
-			videoRoutes.GET("/", appAPI.GetVideos)
-			videoRoutes.POST("/", appAPI.CreateVideos)
-			videoRoutes.PUT("/:id", appAPI.UpdateVideos)
-			videoRoutes.DELETE("/:id", appAPI.DeleteVideos)
+			videoRoutes.GET("/", videoAPI.GetVideos)
+			videoRoutes.POST("/", videoAPI.CreateVideos)
+			videoRoutes.PUT("/:id", videoAPI.UpdateVideos)
+			videoRoutes.DELETE("/:id", videoAPI.DeleteVideos)
 		}
 	}
 	server.GET("/docs/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	server.Run(port)
+	server.Run(host)
 }
