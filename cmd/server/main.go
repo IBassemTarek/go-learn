@@ -1,26 +1,53 @@
 package main
 
 import (
+	"go-learn/api"
 	controller "go-learn/controllers"
+	docs "go-learn/docs"
 	middleware "go-learn/middlewares"
+	"go-learn/repository"
 	service "go-learn/services"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
+
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 var (
-	videoService    service.VideoService       = service.NewVideoService()
+	videoRepository repository.VideoRepository = repository.NewVideoRepository()
+	videoService    service.VideoService       = service.NewVideoService(videoRepository)
 	videoController controller.VideoController = controller.NewVideoController(videoService)
 	loginService    service.LoginService       = service.NewLoginService()
 	jwtService      service.JWTService         = service.NewJWTService()
 	loginController controller.LoginController = controller.NewLoginController(loginService, jwtService)
 )
 
-func main() {
-	server := gin.Default()
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
 
+// @SecurityRequirement Bearer
+func main() {
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "localhost:8082"
+	}
+
+	// swagger 2.0 meta information
+	docs.SwaggerInfo.Title = "Demo Video API"
+	docs.SwaggerInfo.Description = "This is a simple video API"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = port
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
+	// defer the close of the db connection
+	defer videoRepository.CloseDB()
+
+	server := gin.New()
 	server.Use(
 		gin.Recovery(),
 		//* basic auth
@@ -34,39 +61,21 @@ func main() {
 		// gindump.Dump(),
 	)
 
-	apiRoutes := server.Group("/api")
+	appAPI := api.NewAppAPI(loginController, videoController)
+	apiRoutes := server.Group(docs.SwaggerInfo.BasePath)
 	{
-		apiRoutes.POST("/login", func(ctx *gin.Context) {
-			token, err := loginController.Login(ctx)
-			if err != nil {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			} else {
-				ctx.JSON(http.StatusOK, gin.H{"token": token})
-			}
-		})
-
+		authRoutes := apiRoutes.Group("/auth")
+		{
+			authRoutes.POST("/login", appAPI.Authenticate)
+		}
 		videoRoutes := apiRoutes.Group("/video", middleware.AuthorizeJWT())
 		{
-			videoRoutes.GET("/", func(ctx *gin.Context) {
-				ctx.JSON(http.StatusOK, videoController.FindAll())
-			})
-
-			videoRoutes.POST("/", func(ctx *gin.Context) {
-				err := videoController.Save(ctx)
-				if err != nil {
-					ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				} else {
-					ctx.JSON(http.StatusOK, gin.H{"message": "video created successfully"})
-				}
-			})
+			videoRoutes.GET("/", appAPI.GetVideos)
+			videoRoutes.POST("/", appAPI.CreateVideos)
+			videoRoutes.PUT("/:id", appAPI.UpdateVideos)
+			videoRoutes.DELETE("/:id", appAPI.DeleteVideos)
 		}
 	}
-
-	post := os.Getenv("PORT")
-	if post == "" {
-		post = "localhost:8082"
-	} else {
-		post = ":8082"
-	}
-	server.Run(post)
+	server.GET("/docs/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	server.Run(port)
 }

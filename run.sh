@@ -4,6 +4,9 @@ case $1 in
   "start")
     go run cmd/server/main.go
     ;;
+  "swagger")
+    swag init -g cmd/server/main.go
+    ;;
   "docker-build")
     if [ "$#" -ne 3 ]; then
       echo "Usage: ./run.sh docker-build <image_name> <tag>"

@@ -25,7 +25,7 @@ func NewLoginController(loginService service.LoginService, jwtService service.JW
 }
 
 func (controller *loginController) Login(ctx *gin.Context) (string, error) {
-	var credentials dto.Credentails
+	var credentials dto.Credentials
 	err := ctx.ShouldBindJSON(&credentials)
 	if err != nil {
 		return "", err

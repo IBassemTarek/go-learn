@@ -1,0 +1,225 @@
+definitions:
+  dto.Credentials:
+    properties:
+      password:
+        type: string
+      user_name:
+        type: string
+    required:
+    - password
+    - user_name
+    type: object
+  dto.Response:
+    properties:
+      message:
+        type: string
+    type: object
+  dto.Token:
+    properties:
+      token:
+        type: string
+    type: object
+  entity.Person:
+    properties:
+      age:
+        description: btw 1 and 130
+        maximum: 130
+        minimum: 1
+        type: integer
+      email:
+        description: required and email validation
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    type: object
+  entity.Video:
+    properties:
+      autor:
+        $ref: '#/definitions/entity.Person'
+      description:
+        description: max 200
+        maxLength: 200
+        type: string
+      title:
+        description: min 2 and max 100
+        maxLength: 100
+        minLength: 2
+        type: string
+      url:
+        description: required and url validation and custom validation
+        type: string
+    required:
+    - autor
+    - url
+    type: object
+info:
+  contact: {}
+paths:
+  /auth/login:
+    post:
+      description: authenticate with username and password to get the JWT token
+      operationId: authentication
+      parameters:
+      - description: Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Token'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Provides a JWT token
+      tags:
+      - Auth
+  /video:
+    get:
+      consumes:
+      - application/json
+      description: get all videos
+      operationId: list-videos
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entity.Video'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - Bearer: []
+      summary: List existing videos
+      tags:
+      - Videos
+    post:
+      consumes:
+      - application/json
+      description: create a new video
+      operationId: create-video
+      parameters:
+      - description: Video
+        in: body
+        name: video
+        required: true
+        schema:
+          $ref: '#/definitions/entity.Video'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - Bearer: []
+      summary: create a new video
+      tags:
+      - Videos
+  /video/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a video by ID
+      operationId: delete-video
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - Bearer: []
+      summary: Delete a video
+      tags:
+      - Videos
+    put:
+      consumes:
+      - application/json
+      description: update a video by ID
+      operationId: update-video
+      parameters:
+      - description: Video
+        in: body
+        name: video
+        required: true
+        schema:
+          $ref: '#/definitions/entity.Video'
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - Bearer: []
+      summary: update a video
+      tags:
+      - Videos
+securityDefinitions:
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
